@@ -10,8 +10,6 @@ Welcome to my Bachelor's project documentation
    :maxdepth: 2
    :caption: Contents:
 
-
-
 Indices and tables
 ==================
 
