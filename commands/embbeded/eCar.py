@@ -1,9 +1,9 @@
 #! ../../.venv/bin python3.11
 
-import serial
+#import serial
 import time
 
-class car:
+class Car:
     def __init__(self, com, baud):
         self.ser = serial.Serial(f"/dev/{com}", baudrate= baud, timeout= 1.0)
         time.sleep(3)
