@@ -1,6 +1,6 @@
 #! ../../.venv/bin python3.11
 
-#import serial
+import serial
 import time
 
 class Car:
