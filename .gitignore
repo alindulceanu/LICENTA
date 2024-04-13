@@ -1,3 +1,5 @@
 /.venv
 /docs/build/.
 arduino-1.8.19
+/commands/test.py
+/commands/__pycache__
