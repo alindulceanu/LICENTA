@@ -50,7 +50,12 @@ class SignDetector:
         contArea = []
 
         for cnt in contours:
-            approx = cv2.approxPolyDP(cnt, 0.02*cv2.arcLength(cnt, True), True)
+            epsilon = 0.04
+            closedPerimeter = True
+            perimeter = cv2.arcLength(cnt, closedPerimeter)
+
+            approx = cv2.approxPolyDP(cnt, epsilon * perimeter, closedPerimeter)
+
             area = cv2.contourArea(cnt)
 
             app.append(approx)
@@ -69,24 +74,24 @@ class SignDetector:
             x, y, w, h = cv2.boundingRect(app[i])
 
             if len(app[i]) == 8 and contArea[i] > 10000 and color == "Red":
-                signs.append(((x, y, w, h), "Stop"))
+                signs.append(((x, y, w, h), "Stop", app[i]))
 
             elif len(app[i]) == 3 and contArea[i] > 10000 and color == "Red":
-                signs.append(((x, y, w, h), "Yield"))
+                signs.append(((x, y, w, h), "Yield", app[i]))
 
             elif len(app[i]) == 4 and contArea[i] > 10000 and color == "Blue":
-                signs.append(((x, y, w, h), "Pedestrian"))
+                signs.append(((x, y, w, h), "Pedestrian", app[i]))
 
             elif len(app[i]) == 4 and contArea[i] > 10000 and color == "Yellow":
-                signs.append(((x - 10, y - 10, w + 20, h + 20), "Priority"))
+                signs.append(((x - 10, y - 10, w + 20, h + 20), "Priority", app[i]))
         
         return signs
     
     def drawSigns(self, image, signs):
         for i in range(len(signs)):
-            for coords, sign in signs[i]:
+            for coords, sign, cont in signs[i]:
                 cv2.rectangle(image, (coords[0], coords[1]), (coords[0] + coords[2], coords[1] + coords[3]), (0, 255, 0), 2)
-
+                cv2.drawContours(image, [cont], -1, (255, 0, 0), 3)
                 cv2.putText(image,  sign, (coords[0], coords[1] + coords[3] +20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0), 2)
 
         return image
