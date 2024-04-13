@@ -4,7 +4,14 @@ import cv2
 class StartCamera:
     def __init__(self):
         # define a video capture object 
-        self.vid = cv2.VideoCapture(0) 
+        pipeline = (
+            'libcamerasrc ! '
+            'video/x-raw,format=(string)YUY2,width=640,height=480,framerate=15/1 ! '
+            'videoconvert ! '
+            'video/x-raw,format=(string)BGR ! '
+            'appsink'
+        )
+        self.vid = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER) 
 
     def __del__(self):
         # After the loop release the cap object 
