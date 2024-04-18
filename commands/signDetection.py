@@ -45,12 +45,11 @@ class SignDetector:
     
     def findAllContours(self, mask):
         contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        count = 0
         app = []
         contArea = []
 
         for cnt in contours:
-            epsilon = 0.04
+            epsilon = 0.02
             closedPerimeter = True
             perimeter = cv2.arcLength(cnt, closedPerimeter)
 
@@ -60,7 +59,6 @@ class SignDetector:
 
             app.append(approx)
             contArea.append(area)
-            count += 1
 
         if len(contours) != 0:
             return app, contArea
@@ -73,16 +71,16 @@ class SignDetector:
         for i in range(len(app)):
             x, y, w, h = cv2.boundingRect(app[i])
 
-            if len(app[i]) == 8 and contArea[i] > 10000 and color == "Red":
+            if len(app[i]) == 8 and contArea[i] > 5000 and color == "Red":
                 signs.append(((x, y, w, h), "Stop", app[i]))
 
-            elif len(app[i]) == 3 and contArea[i] > 10000 and color == "Red":
+            elif len(app[i]) == 3 and contArea[i] > 5000 and color == "Red":
                 signs.append(((x, y, w, h), "Yield", app[i]))
 
-            elif len(app[i]) == 4 and contArea[i] > 10000 and color == "Blue":
+            elif len(app[i]) == 4 and contArea[i] > 5000 and color == "Blue":
                 signs.append(((x, y, w, h), "Pedestrian", app[i]))
 
-            elif len(app[i]) == 4 and contArea[i] > 10000 and color == "Yellow":
+            elif len(app[i]) == 4 and contArea[i] > 500 and color == "Yellow":
                 signs.append(((x - 10, y - 10, w + 20, h + 20), "Priority", app[i]))
         
         return signs
@@ -117,8 +115,3 @@ class SignDetector:
                 allSigns.append(signs)
 
         return allSigns
-
-# detector = signDetector()
-# img = cv2.imread('XD.jpg')
-
-# cv2.imshow("Image", detector.detectAndDraw(img))
