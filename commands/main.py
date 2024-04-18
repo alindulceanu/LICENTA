@@ -13,8 +13,9 @@ running = True
 
 # Event to signal when a frame is available for processing
 frame_available_condition = threading.Condition()
-signs_to_process = threading.Event()
-frame = []
+sign_detected_event = threading.Event()
+
+frame = None
 
 # Thread-safe queue to pass image data
 imageQueue = queue.Queue()
@@ -26,7 +27,6 @@ signType = ""
 signsQueue = []
 
 # Initialize the camera, sign detector, and car
-myCamera = StartCamera()
 myDetector = SignDetector()
 myCar = Car("ttyUSB0", 115200)
 myLineFollower = LineFollower()
@@ -35,25 +35,25 @@ myFrameDrawer = FrameDrawer()
 # Function to capture frames from the camera
 def captureFrames():
     global running, frame
-    camera = StartCamera()
+    myCamera = StartCamera()
     print("Capture thread started.")
     while running:
-        ret, new_frame = camera.provideFrame()
+        ret, new_frame = myCamera.provideFrame()
         if ret:
             with frame_available_condition:
                 frame = new_frame
                 frame_available_condition.notify_all()
         else:
             print("Failed to capture frame")
-    camera.cameraStop()
+    myCamera.cameraStop()
     print("Capture thread closed.")
 
 # Function to detect signs and process frames
 def signDetection():
     global running, frame
     print("Detection thread started.")
-    colors = ("Green", "Blue", "Green")
-    lineSizes = (2,1,3)
+    colors = ("Teal", "Orange", "Gold")
+    lineSizes = (2,1,2)
 
     while running:
         with frame_available_condition:
@@ -80,6 +80,7 @@ def signDetection():
         if most_important_sign:
             print(f"Detected highest priority sign: {most_important_sign}")
             signs_to_process.put((highest_priority, most_important_sign))  # Send to reaction function
+            sign_detected_event.set()
     print("Detection thread closed.")
 
 def signReaction():
@@ -87,10 +88,13 @@ def signReaction():
     
     print("Reaction thread started.")
     while running:
-        priority, signType = signs_to_process.get()  # Wait until a sign is available
+        sign_detected_event.wait()
+        if not signs_to_process.empty():
+            priority, sign = signs_to_process.get()
         print(f"Processing {signType} with highest priority from the detection")
         take_action_based_on_sign(signType)
         previous_sign = signType
+        sign_detected_event.clear()
     print("Reaction thread closed.")
 
 def take_action_based_on_sign(signType):
@@ -128,8 +132,8 @@ def key_event_handler(event, x, y, flags, param):
     global running
     if event == cv2.EVENT_LBUTTONDOWN and flags & cv2.EVENT_FLAG_CTRLKEY:
         running = False
-        #frame_available_condition.set()  # Unblock any threads waiting on this event
-        signs_to_process.set()  # Unblock the reaction thread
+        with frame_available_condition:
+            frame_available_condition.notify_all()  # Notify all waiting threads
 
 # Main function
 signs_to_process = queue.Queue()  # Simplified to a single queue without using heap
@@ -162,7 +166,6 @@ def main():
     detection_thread.join()
     reaction_thread.join()
 
-    myCamera.cameraStop()
     cv2.destroyAllWindows()
     print("Gracefully shutdown all threads.")
 

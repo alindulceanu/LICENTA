@@ -28,24 +28,24 @@ class FrameDrawer:
     def drawSigns(self, frame, signs, colors, lineSizes):
         for i in range(len(signs)):
             for coords, sign, cont in signs[i]:
-                frame = self.drawRectangles(frame, coords, colors[0], lineSize[0])
-                frame = self.drawContours(frame, cont, color[1], lineSize[1])
+                frame = self.drawRectangle(frame, coords, colors[0], lineSizes[0])
+                frame = self.drawContour(frame, cont, colors[1], lineSizes[1])
                 textOrigin = (coords[0], coords[1] + coords[3] +20)
-                frame = self.drawTexts(frame, sign, textOrigin, color[2], lineSize[2])
+                frame = self.drawText(frame, sign, textOrigin, colors[2], 0.7, lineSizes[2])
 
         return frame
 
-    def drawText(self, frame, texts, position, color, fontSize = 0.7, lineSize = 2):
+    def drawText(self, frame, text, position, color, fontSize = 0.7, lineSize = 2):
         cv2.putText(frame, text, position, cv2.FONT_HERSHEY_SIMPLEX, fontSize, self.colors.get(color), lineSize)
 
         return frame
 
     def drawContour(self, frame, contours, color, lineSize = 2):
-        cv2.drawContours(frame, [contour], -1, self.colors.get(color), lineSize)
+        cv2.drawContours(frame, [contours], -1, self.colors.get(color), lineSize)
         
         return frame
 
-    def drawRectangles(self, frame, rectangle, color, lineSize = 2):
+    def drawRectangle(self, frame, rectangle, color, lineSize = 2):
         startPoint = (rectangle[0], rectangle[1])
         endPoint = (rectangle[0] + rectangle[2], rectangle[1] + rectangle[3])
         cv2.rectangle(frame, startPoint, endPoint, self.colors.get(color), lineSize)
