@@ -3,4 +3,4 @@
 arduino-1.8.19
 /commands/test.py
 /commands/__pycache__
-commands/embedded/__pycache__
+/commands/embedded/__pycache__
