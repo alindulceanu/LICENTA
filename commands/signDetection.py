@@ -99,9 +99,9 @@ class SignDetector:
         maskRed = self.processFrame(image, "Red")
         maskBlue = self.processFrame(image, "Blue")
         maskYellow = self.processFrame(image, "Yellow")
-        cv2.imshow("red", maskRed)
-        cv2.imshow("blue", maskBlue)
-        cv2.imshow("yellow", maskYellow)
+        # cv2.imshow("red", maskRed)
+        # cv2.imshow("blue", maskBlue)
+        # cv2.imshow("yellow", maskYellow)
 
         masks = [maskRed, maskBlue, maskYellow]
         colors = ["Red", "Blue", "Yellow"]

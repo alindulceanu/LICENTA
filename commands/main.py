@@ -6,7 +6,7 @@ import queue
 from signDetection import SignDetector
 from camera import StartCamera
 from embedded.eCar import Car
-from lineFollower import LineFollower
+from test3 import LineFollower
 from drawFrames import FrameDrawer
 
 running = True
@@ -60,8 +60,9 @@ def signDetection():
             frame_available_condition.wait()
 
         if frame is not None:
-            signs = myDetector.detectAllSigns(frame)
-            detectedSignsImg = myFrameDrawer.drawSigns(frame, signs, colors, lineSizes)
+            signFrame = frame.copy()
+            signs = myDetector.detectAllSigns(signFrame)
+            detectedSignsImg = myFrameDrawer.drawSigns(signFrame, signs, colors, lineSizes)
             if detectedSignsImg is not None:
                 cv2.imshow("Detected Signs", detectedSignsImg)
                 cv2.waitKey(2)
@@ -117,11 +118,23 @@ def lineFollower():
             frame_available_condition.wait()  # Wait for a new frame
             if frame is not None:
                 # Process the frame for line following
-                topView, selectedLines = myLineFollower.findLine(frame)
-                frame = myFrameDrawer.drawLineFollower(frame, selectedLines, color, lineSize)
+                topView, mainLine = myLineFollower.findLine(frame)
+                if mainLine is not None:
+                    line = ((mainLine[0], mainLine[1]), (mainLine[2], mainLine[3]))
+                    topView = myFrameDrawer.drawLine(topView, line, color, lineSize)
+                    slope = round(calculateSlope(mainLine), 3)
+
+                    myCar.setSteering(slope)
+                    previousSlope = slope
+                
+                cv2.imshow("Top View", topView)
+                cv2.waitKey(2)
 
     print("Line follower thread closed.")
 
+def calculateSlope(line):
+    x1, y1, x2, y2 = line
+    return (y1 - y2) / (x2 - x1) if (x2 - x1) != 0 else float('inf')
 
 
 def is_heap_empty(heap):
@@ -143,12 +156,14 @@ def main():
     running = True
 
     capture_thread = threading.Thread(target=captureFrames)
-    detection_thread = threading.Thread(target=signDetection)
-    reaction_thread = threading.Thread(target=signReaction)
+    #detection_thread = threading.Thread(target=signDetection)
+    #reaction_thread = threading.Thread(target=signReaction)
+    lineFollower_thread = threading.Thread(target=lineFollower)
 
     capture_thread.start()
-    detection_thread.start()
-    reaction_thread.start()
+    #detection_thread.start()
+    #reaction_thread.start()
+    lineFollower_thread.start()
 
     cv2.namedWindow('Detected Signs')
     cv2.setMouseCallback('Detected Signs', key_event_handler)
@@ -163,8 +178,9 @@ def main():
         signs_to_process.put((0, 'Exit'))  # Signal reaction thread to exit
 
     capture_thread.join()
-    detection_thread.join()
-    reaction_thread.join()
+    #detection_thread.join()
+    #reaction_thread.join()
+    lineFollower_thread.join()
 
     cv2.destroyAllWindows()
     print("Gracefully shutdown all threads.")

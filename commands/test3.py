@@ -18,10 +18,10 @@ class LineFollower:
 
         # Defining the extraction trapeze
         trapezeShape = np.float32([
-            [126,243],  # Top-left corner
-            [526, 262],  # Top-right corner
-            [590, 473],  # Bottom-right corner
-            [42, 454],   # Bottom-left corner
+            [136, 243],  # Top-left corner
+            [516, 262],  # Top-right corner
+            [580, 473],  # Bottom-right corner
+            [52, 454],   # Bottom-left corner
             ])
 
         # Defining the resulting window
@@ -43,56 +43,59 @@ class LineFollower:
         return topView
 
     def __processImage(self, topView):
+        topView = cv2.cvtColor(topView, cv2.COLOR_BGR2GRAY) 
         #topView = cv2.cvtColor(topView, cv2.COLOR_BGR2HSV)
-        blurred_image = cv2.GaussianBlur(topView, (5, 5), 0)
-        _, mask = cv2.threshold(blurred_image, 127, 255, cv2.THRESH_BINARY)
+        #blurred_image = cv2.GaussianBlur(topView, (5, 5), 0)
+        _, topView = cv2.threshold(topView, 127, 255, cv2.THRESH_BINARY)
         # lowerYellow = np.array([20, 75, 75])
         # upperYellow = np.array([40, 255, 255])
         # lowerWhite = np.array([0, 0, 200])
         # upperWhite = np.array([179, 55, 255])
         # mask = cv2.inRange(topView, lowerWhite, upperWhite)
 
-        cv2.imshow("White", mask)
-        kernel_size = 5
-        kernel = np.ones((kernel_size, kernel_size), np.uint8)
+        
+        # kernel_size = 5
+        # kernel = np.ones((kernel_size, kernel_size), np.uint8)
 
-        # Morphological closing to remove noise inside the white line
-        closing = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        # # Morphological closing to remove noise inside the white line
+        # closing = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
 
-        # Morphological opening to remove noise outside the white line
-        opening = cv2.morphologyEx(closing, cv2.MORPH_OPEN, kernel)
+        # # Morphological opening to remove noise outside the white line
+        # opening = cv2.morphologyEx(closing, cv2.MORPH_OPEN, kernel)
 
         # kernel = np.ones((6,6), np.uint8)
         # mask = cv2.dilate(mask, kernel, iterations=3)
         # mask = cv2.erode(mask, kernel, iterations=2)
+        # cv2.imshow("White", topView)
+        return topView
 
-        edges = cv2.Canny(opening, 150, 160, apertureSize=3)
+    def __skeletonize(self, frame):
+        skeleton = np.zeros(frame.shape, np.uint8)
+        eroded = np.zeros(frame.shape, np.uint8)
+        temp = np.zeros(frame.shape, np.uint8)
 
-        cv2.imshow("Canny", edges)
+        element = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
 
-        return edges
+        while True:
+            cv2.erode(frame, element, eroded)
+            cv2.dilate(eroded, element, temp)
+            cv2.subtract(frame, temp, temp)
+            cv2.bitwise_or(skeleton, temp, skeleton)
+            frame, eroded = eroded, frame  # Swap instead of copy
+
+            if cv2.countNonZero(frame) == 0:
+                return skeleton
 
     def __detectLine(self, edges):
-        lines = cv2.HoughLines(edges, 1.5, np.pi / 180, 200)
-        lineCoords = []
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=100, maxLineGap=10)
 
         # Converting the lines from polar coordinate system to cartesian
         if lines is not None:
-            for line in lines:
-                rho, theta = line[0]
-                a = np.cos(theta)
-                b = np.sin(theta)
-                x0 = a * rho
-                y0 = b * rho
-                center = [x0, y0]
-                x1 = int(x0 + 1000 * (-b))
-                y1 = int(y0 + 1000 * (a))
-                x2 = int(x0 - 1000 * (-b))
-                y2 = int(y0 - 1000 * (a))
-                center = (int(x0), int(y0))
-                lineCoords.append((((x1, y1), (x2, y2)), center))
+            # Assuming the longest line is the main line
+            main_line = sorted(lines, key=lambda x: np.linalg.norm((x[0][0] - x[0][2], x[0][1] - x[0][3])), reverse=True)[0]
+            return main_line[0]
 
-        return lineCoords
+        return None
 
     def __excludeErronousLines(self, lineCoords):
         validLines = []
@@ -110,7 +113,8 @@ class LineFollower:
     def findLine(self, frame):
         topView = self.__convertImage(frame, self.transformMatrix)
         processedImage = self.__processImage(topView)
-        allLines = self.__detectLine(processedImage)
+        skeletonImage = self.__skeletonize(processedImage)
+        mainLine = self.__detectLine(skeletonImage)
         # if len(allLines) != 0:
         #     selectedLines = self.__excludeErronousLines(allLines)
 
@@ -119,5 +123,5 @@ class LineFollower:
         # else:
         #     return topView, None
 
-        return topView, allLines
+        return topView, mainLine
 

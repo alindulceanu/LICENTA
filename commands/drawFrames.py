@@ -21,6 +21,7 @@ class FrameDrawer:
     def drawLineFollower(self, frame, lines, color, lineSize = 2):
         for line in lines:
             linePoints = (line[0][0], line[0][1])
+            lineCenter = line[1]
             self.drawLine(frame, linePoints, color, lineSize)
 
         return frame
@@ -32,6 +33,12 @@ class FrameDrawer:
                 frame = self.drawContour(frame, cont, colors[1], lineSizes[1])
                 textOrigin = (coords[0], coords[1] + coords[3] +20)
                 frame = self.drawText(frame, sign, textOrigin, colors[2], 0.7, lineSizes[2])
+
+        return frame
+
+    def drawBoxCorners(self, frame, box, color):
+        for point in box:
+            frame = self.drawPoint(frame, point, color)
 
         return frame
 
@@ -54,5 +61,10 @@ class FrameDrawer:
 
     def drawLine(self, frame, line, color, lineSize = 2):
         cv2.line(frame, line[0], line[1], self.colors.get(color), lineSize)
+
+        return frame
+
+    def drawPoint(self, frame, point, color, lineSize = 2):
+        cv2.circle(frame, point, 2, self.colors.get(color), lineSize)
 
         return frame
