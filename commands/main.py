@@ -52,8 +52,10 @@ def captureFrames():
 def signDetection():
     global running, frame
     print("Detection thread started.")
-    colors = ("Teal", "Orange", "Gold")
-    lineSizes = (2,1,2)
+    sign_priority_map = {"Stop": 1, "Pedestrian": 2, "Yield": 3, "Priority": 4, "No Sign": 5}
+    colors = ("Teal", "LightBlue", "Gold")
+    lineSizes = (2, 2, 2)
+    lastSign = None
 
     while running:
         with frame_available_condition:
@@ -63,6 +65,7 @@ def signDetection():
             signFrame = frame.copy()
             signs = myDetector.detectAllSigns(signFrame)
             detectedSignsImg = myFrameDrawer.drawSigns(signFrame, signs, colors, lineSizes)
+
             if detectedSignsImg is not None:
                 cv2.imshow("Detected Signs", detectedSignsImg)
                 cv2.waitKey(2)
@@ -70,40 +73,43 @@ def signDetection():
             most_important_sign = None
             highest_priority = float('inf')
 
-            for sign in signs:
-                if sign:
-                    sign_priority_map = {"Stop": 1, "Pedestrian": 2, "Yield": 3, "Priority": 4}
-                    sign_priority = sign_priority_map.get(sign[0][1], 5)
-                    if sign_priority < highest_priority:
-                        highest_priority = sign_priority
-                        most_important_sign = sign[0][1]
+            if len(signs) == 0:
+                most_important_sign = "No Sign"
+                highest_priority = 5
 
-        if most_important_sign:
-            print(f"Detected highest priority sign: {most_important_sign}")
-            signs_to_process.put((highest_priority, most_important_sign))  # Send to reaction function
+            for sign in signs:
+                sign_priority = sign_priority_map.get(sign[1], 5)
+                if sign_priority < highest_priority:
+                    highest_priority = sign_priority
+                    most_important_sign = sign[1]
+
+        if most_important_sign and most_important_sign != lastSign:
+            lastSign = most_important_sign
+            signs_to_process.put((highest_priority, most_important_sign))
             sign_detected_event.set()
+
     print("Detection thread closed.")
 
 def signReaction():
-    global running, previous_sign
-    
+    global running
     print("Reaction thread started.")
     while running:
         sign_detected_event.wait()
         if not signs_to_process.empty():
             priority, sign = signs_to_process.get()
-        print(f"Processing {signType} with highest priority from the detection")
-        take_action_based_on_sign(signType)
-        previous_sign = signType
+
+        take_action_based_on_sign(sign)
         sign_detected_event.clear()
+
     print("Reaction thread closed.")
 
 def take_action_based_on_sign(signType):
     actions = {
-        "Stop": lambda: myCar.setVelocity(0),
-        "Pedestrian": lambda: myCar.setVelocity(13),
-        "Yield": lambda: (myCar.setVelocity(0), time.sleep(5), myCar.setVelocity(20)),
-        "Priority": lambda: myCar.setVelocity(30)
+        "Stop": lambda: (myCar.setVelocity(0), print("Stopping.")),
+        "Pedestrian": lambda: (myCar.setVelocity(10), print("Slowing down, pedestrians ahead.")),
+        "Yield": lambda: (myCar.setVelocity(0), print("Yielding."), time.sleep(5)),
+        "Priority": lambda: (myCar.setVelocity(30), print("Speeding up, priority road ahead.")),
+        "No Sign": lambda: (myCar.setVelocity(0), print("No sign detected"))
     }
     action = actions.get(signType, lambda: None)
     action()
@@ -147,6 +153,7 @@ def key_event_handler(event, x, y, flags, param):
         running = False
         with frame_available_condition:
             frame_available_condition.notify_all()  # Notify all waiting threads
+            sign_detected_event.set()
 
 # Main function
 signs_to_process = queue.Queue()  # Simplified to a single queue without using heap
@@ -156,31 +163,22 @@ def main():
     running = True
 
     capture_thread = threading.Thread(target=captureFrames)
-    #detection_thread = threading.Thread(target=signDetection)
-    #reaction_thread = threading.Thread(target=signReaction)
-    lineFollower_thread = threading.Thread(target=lineFollower)
+    detection_thread = threading.Thread(target=signDetection)
+    reaction_thread = threading.Thread(target=signReaction)
+    # lineFollower_thread = threading.Thread(target=lineFollower)
 
     capture_thread.start()
-    #detection_thread.start()
-    #reaction_thread.start()
-    lineFollower_thread.start()
+    detection_thread.start()
+    reaction_thread.start()
+    # lineFollower_thread.start()
 
     cv2.namedWindow('Detected Signs')
     cv2.setMouseCallback('Detected Signs', key_event_handler)
 
-    try:
-        while running:
-            time.sleep(0.1)
-    except KeyboardInterrupt:
-        print("Interrupt received, shutting down.")
-        running = False
-        frame_available_event.set()
-        signs_to_process.put((0, 'Exit'))  # Signal reaction thread to exit
-
     capture_thread.join()
-    #detection_thread.join()
-    #reaction_thread.join()
-    lineFollower_thread.join()
+    detection_thread.join()
+    reaction_thread.join()
+    # lineFollower_thread.join()
 
     cv2.destroyAllWindows()
     print("Gracefully shutdown all threads.")

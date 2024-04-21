@@ -26,35 +26,6 @@ double calculateDistance(){
 }
 
 void move(String com, int val = 0){
-/*  
-  if (dir == "forward"){
-    Serial.println("forward!");
-    digitalWrite(forward, 1);
-    digitalWrite(backward, 0);
-    analogWrite(velocity, speed);
-  }
-
-  else if (dir == "backward"){
-    Serial.println("backward!");
-    digitalWrite(forward, 0);
-    digitalWrite(backward, 1);
-    analogWrite(velocity, speed);
-  }
-
-  else if (dir == "stop"){
-    analogWrite(velocity, 0);
-  }
-
-  else if (dir == "spin"){
-    Serial.println("Spinning!");
-    myservo.write(speed);  
-  }
-
-  else{
-    Serial.println("Wrong command!");
-  }
-*/
-
   if (com == "dc"){
     if (val < 0){
       Serial.println("backward!");
@@ -71,17 +42,17 @@ void move(String com, int val = 0){
       val = map(abs(val), 0, 30, 20, 50);      
     }
     
-    if (val > 30){
-      val = 30;
+    if (val >= 50){
+      val = 50;
     }
     analogWrite(velocity, val);
   }
 
   else if (com == "srv"){
-    val = map(val, -50, 50, 55, 125);
+    val = map(val, -50, 50, 57, 125);
 
-    if (val < 55)
-      val = 55;
+    if (val < 57)
+      val = 57;
     
     else if (val > 125)
       val = 125;

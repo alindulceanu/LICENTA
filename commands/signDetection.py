@@ -10,13 +10,14 @@ class SignDetector:
         cv2.destroyAllWindows()
 
     def processFrame(self, image, color):
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        hsv = cv2.GaussianBlur(image, (15, 15), 2)
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)        
 
         if color == "Red":
             # Define the range of red color in HSV
-            lowerRed = np.array([0, 200, 50])
-            upperRed = np.array([5, 255, 255])
-            lowerRed2 = np.array([160, 200, 50])
+            lowerRed = np.array([0, 150, 100])
+            upperRed = np.array([10, 255, 255])
+            lowerRed2 = np.array([170, 150, 100])
             upperRed2 = np.array([180, 255, 255])
 
             # Threshold the HSV image to get only red colors
@@ -26,20 +27,20 @@ class SignDetector:
             mask = cv2.bitwise_or(mask1, mask2)
 
         elif color == "Blue":
-            lowerBlue = np.array([100, 100, 100])
-            upperBlue = np.array([140, 255, 255])
+            lowerBlue = np.array([105, 150, 200])
+            upperBlue = np.array([135, 255, 255])
 
             mask = cv2.inRange(hsv, lowerBlue, upperBlue)
 
         elif color == "Yellow":
-            lowerYellow = np.array([20, 75, 75])
-            upperYellow = np.array([40, 255, 255])
+            lowerYellow = np.array([25, 125, 100])
+            upperYellow = np.array([35, 255, 255])
 
             mask = cv2.inRange(hsv, lowerYellow, upperYellow)
 
         kernel = np.ones((5,5), np.uint8)
-        mask = cv2.dilate(mask, kernel, iterations=3)
-        mask = cv2.erode(mask, kernel, iterations=2)
+        mask = cv2.dilate(mask, kernel, iterations=2)
+        mask = cv2.erode(mask, kernel, iterations=1)
 
         return mask
     
@@ -49,7 +50,7 @@ class SignDetector:
         contArea = []
 
         for cnt in contours:
-            epsilon = 0.02
+            epsilon = 0.03
             closedPerimeter = True
             perimeter = cv2.arcLength(cnt, closedPerimeter)
 
@@ -71,16 +72,16 @@ class SignDetector:
         for i in range(len(app)):
             x, y, w, h = cv2.boundingRect(app[i])
 
-            if len(app[i]) == 8 and contArea[i] > 5000 and color == "Red":
+            if len(app[i]) == 8 and contArea[i] > 3000 and color == "Red":
                 signs.append(((x, y, w, h), "Stop", app[i]))
 
-            elif len(app[i]) == 3 and contArea[i] > 5000 and color == "Red":
+            elif len(app[i]) == 3 and contArea[i] > 3000 and color == "Red":
                 signs.append(((x, y, w, h), "Yield", app[i]))
 
-            elif len(app[i]) == 4 and contArea[i] > 5000 and color == "Blue":
+            elif len(app[i]) == 4 and contArea[i] > 3000 and color == "Blue":
                 signs.append(((x, y, w, h), "Pedestrian", app[i]))
 
-            elif len(app[i]) == 4 and contArea[i] > 500 and color == "Yellow":
+            elif len(app[i]) == 4 and contArea[i] > 3000 and color == "Yellow":
                 signs.append(((x - 10, y - 10, w + 20, h + 20), "Priority", app[i]))
         
         return signs
@@ -99,9 +100,9 @@ class SignDetector:
         maskRed = self.processFrame(image, "Red")
         maskBlue = self.processFrame(image, "Blue")
         maskYellow = self.processFrame(image, "Yellow")
-        # cv2.imshow("red", maskRed)
-        # cv2.imshow("blue", maskBlue)
-        # cv2.imshow("yellow", maskYellow)
+        cv2.imshow("red", maskRed)
+        cv2.imshow("blue", maskBlue)
+        cv2.imshow("yellow", maskYellow)
 
         masks = [maskRed, maskBlue, maskYellow]
         colors = ["Red", "Blue", "Yellow"]
@@ -112,6 +113,8 @@ class SignDetector:
 
             if (app, cont) != (False, False):
                 signs = self.findShapes(app, cont, colors[i])
-                allSigns.append(signs)
+
+                for sign in signs:
+                    allSigns.append(sign)
 
         return allSigns

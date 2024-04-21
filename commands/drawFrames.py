@@ -27,12 +27,12 @@ class FrameDrawer:
         return frame
 
     def drawSigns(self, frame, signs, colors, lineSizes):
-        for i in range(len(signs)):
-            for coords, sign, cont in signs[i]:
-                frame = self.drawRectangle(frame, coords, colors[0], lineSizes[0])
-                frame = self.drawContour(frame, cont, colors[1], lineSizes[1])
-                textOrigin = (coords[0], coords[1] + coords[3] +20)
-                frame = self.drawText(frame, sign, textOrigin, colors[2], 0.7, lineSizes[2])
+        for (x, y, w, h), sign, cont in signs:
+            coords = (x, y, w, h)
+            frame = self.drawRectangle(frame, coords, colors[0], lineSizes[0])
+            frame = self.drawContour(frame, cont, colors[1], lineSizes[1])
+            textOrigin = (coords[0], coords[1] + coords[3] + 20)
+            frame = self.drawText(frame, sign, textOrigin, colors[2], 0.7, lineSizes[2])
 
         return frame
 
