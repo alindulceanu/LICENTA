@@ -2,5 +2,7 @@
 /docs/build/.
 arduino-1.8.19
 /commands/test.py
+/commands/test2.py
+/commands/test3.py
 /commands/__pycache__
 /commands/embedded/__pycache__
