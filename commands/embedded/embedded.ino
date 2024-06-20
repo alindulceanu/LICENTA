@@ -49,12 +49,12 @@ void move(String com, int val = 0){
   }
 
   else if (com == "srv"){
-    val = map(val, -50, 50, 57, 125);
+    val = map(val, -50, 50, 57, 123);
 
     if (val < 57)
       val = 57;
     
-    else if (val > 125)
+    else if (val > 123)
       val = 125;
 
     myservo.write(val);

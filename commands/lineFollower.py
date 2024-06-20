@@ -18,10 +18,10 @@ class LineFollower:
 
         # Defining the extraction trapeze
         trapezeShape = np.float32([
-            [136, 243],  # Top-left corner
-            [516, 262],  # Top-right corner
-            [580, 473],  # Bottom-right corner
-            [52, 454],   # Bottom-left corner
+            [136, 253],  # Top-left corner
+            [516, 252],  # Top-right corner
+            [580, 453],  # Bottom-right corner
+            [52, 474],   # Bottom-left corner
             ])
 
         # Defining the resulting window
@@ -76,26 +76,36 @@ class LineFollower:
 
         element = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
 
+        if cv2.countNonZero(frame) == 0 or np.all(frame == 255):
+            return None
+
         while True:
             cv2.erode(frame, element, eroded)
             cv2.dilate(eroded, element, temp)
             cv2.subtract(frame, temp, temp)
             cv2.bitwise_or(skeleton, temp, skeleton)
             frame, eroded = eroded, frame  # Swap instead of copy
+            
 
             if cv2.countNonZero(frame) == 0:
+                cv2.imshow("skeleton", skeleton)
                 return skeleton
 
+
+        
+
     def __detectLine(self, edges):
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=100, maxLineGap=10)
+        try:
+            lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=100, maxLineGap=10)
 
-        # Converting the lines from polar coordinate system to cartesian
-        if lines is not None:
-            # Assuming the longest line is the main line
-            main_line = sorted(lines, key=lambda x: np.linalg.norm((x[0][0] - x[0][2], x[0][1] - x[0][3])), reverse=True)[0]
-            return main_line[0]
+            # Converting the lines from polar coordinate system to cartesian
+            if lines is not None:
+                # Assuming the longest line is the main line
+                main_line = sorted(lines, key=lambda x: np.linalg.norm((x[0][0] - x[0][2], x[0][1] - x[0][3])), reverse=True)[0]
+                return main_line[0]
 
-        return None
+        except:
+            return None
 
     def __excludeErronousLines(self, lineCoords):
         validLines = []
@@ -111,17 +121,31 @@ class LineFollower:
         return validLines
 
     def findLine(self, frame):
-        topView = self.__convertImage(frame, self.transformMatrix)
-        processedImage = self.__processImage(topView)
-        skeletonImage = self.__skeletonize(processedImage)
-        mainLine = self.__detectLine(skeletonImage)
-        # if len(allLines) != 0:
-        #     selectedLines = self.__excludeErronousLines(allLines)
+        try:
+            topView = self.__convertImage(frame, self.transformMatrix)
+            #print(f"top:{topView}")
+            processedImage = self.__processImage(topView)
+            #print(f"proces:{processedImage}")
+            skeletonImage = self.__skeletonize(processedImage)
+            #print(f"skeleton:{skeletonImage}")
 
-        #     return topView, selectedLines
+            try:
+                if skeletonImage == None:
+                    return topView, None
+            except:
+                x = 1
 
-        # else:
-        #     return topView, None
+            mainLine = self.__detectLine(skeletonImage)
+            # if len(allLines) != 0:
+            #     selectedLines = self.__excludeErronousLines(allLines)
 
-        return topView, mainLine
+            #     return topView, selectedLines
+
+            # else:
+            #     return topView, None
+
+            return topView, mainLine
+
+        except:
+            print("bruh")
 
